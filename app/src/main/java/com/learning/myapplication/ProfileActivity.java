@@ -9,10 +9,13 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -33,15 +36,30 @@ public class ProfileActivity extends AppCompatActivity {
     Uri uriProfileImage;
     String profileImageUrl;
     FirebaseAuth mAuth;
-
+    TextView textView;
+    Button btnLogout;
+    private FirebaseAuth.AuthStateListener mAuthStateListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile2);
         mAuth = FirebaseAuth.getInstance();
+        btnLogout=(Button)findViewById(R.id.logout);
 
+        textView = (TextView) findViewById(R.id.textViewVerified);
         editText = (EditText) findViewById(R.id.editTextDisplayName);
         imageView = (ImageView) findViewById(R.id.imageView);
+
+        loadUserInformation();
+
+        btnLogout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FirebaseAuth.getInstance().signOut();
+                Intent intToMain = new Intent(ProfileActivity.this, MainActivity.class);
+                startActivity(intToMain);
+            }
+        });
 
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,6 +76,48 @@ public class ProfileActivity extends AppCompatActivity {
                 saveUserInformation();
             }
         });
+    }
+
+    private void loadUserInformation() {
+        final FirebaseUser user = mAuth.getCurrentUser();
+
+        if (user != null) {
+            if (user.getPhotoUrl() != null) {
+                Glide.with(this)
+                        .load(user.getPhotoUrl().toString())
+                        .into(imageView);
+            }
+
+            if (user.getDisplayName() != null) {
+                editText.setText(user.getDisplayName());
+            }
+
+            if (user.isEmailVerified()) {
+                textView.setText("Email Verified");
+            } else {
+                textView.setText("Email Not Verified (Click to Verify)");
+                textView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        user.sendEmailVerification().addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                Toast.makeText(ProfileActivity.this, "Verification Email Sent", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (mAuth.getCurrentUser() == null) {
+            finish();
+            startActivity(new Intent(this, MainActivity.class));
+        }
     }
 
     private void saveUserInformation() {

@@ -96,4 +96,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
     }
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (mAuth.getCurrentUser() != null) {
+            finish();
+            startActivity(new Intent(this, ProfileActivity.class));
+        }
+    }
 }
